@@ -3,6 +3,6 @@
 
 #include <gsl/gsl_matrix.h>
 
-int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle);
+int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double delta = 1);
 
 #endif

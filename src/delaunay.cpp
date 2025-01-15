@@ -19,7 +19,7 @@ union Supertriangle {
 
 // outputs the vertices of the supertriangle to the supertriangle matrix.
 // this should be a pre-allocated 3x2 matrix
-int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle) {
+int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double delta) {
   if (supertriangle->size1 != 3 && supertriangle->size2 != 2) {
     GSL_ERROR("supertriangle should be 3x2", GSL_EINVAL);
     return -1;
@@ -49,6 +49,13 @@ int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle) {
   S.Bx = xmin - IR3*(ymax - ymin);
   S.Ay = (S.Ax - S.Bx)*R3 + ymin;
   S.Cx = 2*S.Ax - S.Bx;
+
+  // add delta
+  S.Ay += delta;
+  S.Bx -= R3*delta/2;
+  S.By -= delta/2;
+  S.Cx += R3*delta/2;
+  S.Cy -= delta/2;
 
   // make a view into the supertriangle array and copy it onto the
   // output
