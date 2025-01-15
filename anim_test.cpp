@@ -49,6 +49,9 @@ int main() {
 
   // frames can then be merged together into an animation using ffmpeg
   // see: https://trac.ffmpeg.org/wiki/Slideshow
+  /* something like
+     ffmpeg -framerate 1 -i frame%03d.png -vf format=yuv420p -vcodec libx264 -preset veryslow -tune stillimage anim.mp4
+     should do the trick */
 
   return 0;
 }
