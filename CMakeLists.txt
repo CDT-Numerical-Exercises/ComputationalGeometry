@@ -25,7 +25,7 @@ file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cpp)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.h)
 
 # add executable
-add_executable(main main.cpp ${sources} ${headers})
+add_executable(anim_test anim_test.cpp ${sources} ${headers})
 
 # add libraries
 find_package(GSL REQUIRED)
@@ -36,4 +36,4 @@ set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 find_package(Boost 1.71.0 COMPONENTS iostreams system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
-target_link_libraries(main GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
+target_link_libraries(anim_test GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
