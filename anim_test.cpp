@@ -9,6 +9,8 @@
 
 #include "helpers.h"
 
+const std::string dirname("animtest_output");
+
 void save_plot(const std::filesystem::path fn, const std::string gpscript,
                const gsl_matrix *data) {
   Gnuplot gp;
@@ -28,7 +30,7 @@ void save_plot(const std::filesystem::path fn, const std::string gpscript,
 int main() {
   Gnuplot gp;
 
-  std::filesystem::create_directory("output");
+  std::filesystem::create_directory(dirname);
 
   const double points[] =
   { 0.0, 0.0,
@@ -42,7 +44,7 @@ int main() {
   for (int points = 1; points <= 5; ++points) {
     const gsl_matrix_const_view slice_view = gsl_matrix_const_submatrix(&all_data.matrix, 0, 0, points, 2);
     char buf[50];
-    snprintf(buf, sizeof(buf), "output/frame%03d.png", points);
+    snprintf(buf, sizeof(buf), (dirname+"/frame%03d.png").c_str(), points);
     std::cout << buf << std::endl;
     save_plot(buf, "set yrange[-1.5:1.5]\nset xrange[-1.5:1.5]\nplot '-' with circles\n", &slice_view.matrix);
   }
