@@ -27,6 +27,7 @@ file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.h)
 # add executable
 add_executable(anim_test anim_test.cpp ${sources} ${headers})
 add_executable(supertriangle supertriangle.cpp ${sources} ${headers})
+add_executable(circumcentre circumcentre.cpp ${sources} ${headers})
 
 # add libraries
 find_package(GSL REQUIRED)
@@ -39,3 +40,4 @@ find_package(Boost 1.71.0 COMPONENTS iostreams system filesystem)
 include_directories(${Boost_INCLUDE_DIRS})
 target_link_libraries(anim_test GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(supertriangle GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
+target_link_libraries(circumcentre GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
