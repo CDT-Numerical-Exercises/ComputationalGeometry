@@ -2,6 +2,8 @@
 #include <cmath>
 #include <gsl/gsl_matrix.h>
 
+#include "delaunay.h"
+
 const double R3 = sqrt(3);
 const double IR3 = 1.0/sqrt(3);
 
@@ -61,5 +63,44 @@ int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double
   // output
   gsl_matrix_const_view S_view = gsl_matrix_const_view_array(S.verts, 3, 2);
   gsl_matrix_memcpy(supertriangle, &S_view.matrix);
+  return 0;
+}
+
+// calculates the circumcircle for the 3 specified points, and outputs
+// the radius to r and the centre to X.
+// points should be a 3x2 matrix
+// X should be a pre-allocated vector of length 2.
+int find_circumcircle(const gsl_matrix *points, double &r, gsl_vector *X) {
+  if (points->size1 != 3 && points->size2 != 2) {
+    GSL_ERROR("points should be 3x2", GSL_EINVAL);
+    return -1;
+  }
+  if (X->size != 2) {
+    GSL_ERROR("X should be of length 2", GSL_EINVAL);
+    return -2;
+  }
+
+  const double x1 = gsl_matrix_get(points, 0, 0);
+  const double x2 = gsl_matrix_get(points, 1, 0);
+  const double x3 = gsl_matrix_get(points, 2, 0);
+  const double y1 = gsl_matrix_get(points, 0, 1);
+  const double y2 = gsl_matrix_get(points, 1, 1);
+  const double y3 = gsl_matrix_get(points, 2, 1);
+
+  // calculate the norm^2 terms (these can then be reused)
+  const double n1 = x1*x1 + y1*y1;
+  const double n2 = x2*x2 + y2*y2;
+  const double n3 = x3*x3 + y3*y3;
+
+  // calculate the determinants
+  const double a = x1*(y2 - y3) - y1*(x2 - x3) + (x2*y3 - x3*y2);
+  const double bx = -( n1*(y2 - y3) - y1*(n2 - n3) + (n2*y3 - n3*y2) );
+  const double by = n1*(x2 - x3) - x1*(n2 - n3) + (n2*x3 - n3*x2);
+  const double c = -( n1*(x2*y3 - x3*y2) - x1*(n2*y3 - n3*y2) + y1*(n2*x3 - n3*x2) );
+
+  r = sqrt(bx*bx + by*by - 4*a*c)/(2*abs(a));
+  gsl_vector_set(X, 0, (-bx)/(2*a));
+  gsl_vector_set(X, 1, (-by)/(2*a));
+
   return 0;
 }
