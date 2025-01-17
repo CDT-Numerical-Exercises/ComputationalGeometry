@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <gsl/gsl_matrix.h>
+#include <gsl/gsl_blas.h>
 
 #include "delaunay.h"
 
@@ -103,4 +104,12 @@ int find_circumcircle(const gsl_matrix *points, double &r, gsl_vector *X) {
   gsl_vector_set(X, 1, (-by)/(2*a));
 
   return 0;
+}
+
+bool is_in_circumcircle(const gsl_vector *point, const double r, const gsl_vector *X) {
+  double p[2];
+  gsl_vector_view p_view = gsl_vector_view_array(p, 2);
+  gsl_vector_memcpy(&p_view.vector, point);
+  gsl_vector_sub(&p_view.vector, X);
+  return gsl_blas_dnrm2(&p_view.vector) <= r;
 }
