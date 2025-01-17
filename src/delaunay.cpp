@@ -2,9 +2,12 @@
 #include <cmath>
 #include <vector>
 #include <unordered_set>
+#include <unordered_map>
 #include <boost/container_hash/hash.hpp>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
+#include <gnuplot-iostream/gnuplot-iostream.h>
+#include <filesystem>
 
 #include "delaunay.h"
 
@@ -152,3 +155,221 @@ std::size_t hash_value(Edge const &p) {
   ===============
 */
 
+int get_point(const size_t i, const gsl_matrix *verts, const gsl_matrix *supertriangle,
+               gsl_vector *X) {
+  const size_t N = verts->size1;
+  if (i < N) {
+    gsl_vector_set(X, 0, gsl_matrix_get(verts, i, 0));
+    gsl_vector_set(X, 1, gsl_matrix_get(verts, i, 1));
+    return 0;
+  }
+  if (supertriangle == NULL) {
+    return -1;
+  }
+  const size_t j = i - N;
+  gsl_vector_set(X, 0, gsl_matrix_get(supertriangle, j, 0));
+  gsl_vector_set(X, 1, gsl_matrix_get(supertriangle, j, 1));
+  return 0;
+}
+
+int Triangle::to_matrix(const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle, gsl_matrix *X) const {
+  double v[2];
+  gsl_vector_view v_view = gsl_vector_view_array(v, 2);
+
+  gsl_vector_view row = gsl_matrix_row(X, 0);
+  int ret = get_point(A, verts, supertriangle, &v_view.vector);
+  if (ret != 0) return ret;
+  gsl_vector_memcpy(&row.vector, &v_view.vector);
+
+  row = gsl_matrix_row(X, 1);
+  ret = get_point(B, verts, supertriangle, &v_view.vector);
+  if (ret != 0) return ret;
+  gsl_vector_memcpy(&row.vector, &v_view.vector);
+
+  row = gsl_matrix_row(X, 2);
+  ret = get_point(C, verts, supertriangle, &v_view.vector);
+  if (ret != 0) return ret;
+  gsl_vector_memcpy(&row.vector, &v_view.vector);
+
+  return 0;
+}
+
+int Triangle::to_matrix(const gsl_matrix *verts, gsl_matrix *X) const {
+  return Triangle::to_matrix(verts, NULL, X);
+}
+
+// basically a shorthand function to let us test whether a point is
+// inside the triangle without having to manually call to_matrix first
+// also handles the cleanup by stack-allocating everything
+bool Triangle::is_in_circumcircle(const gsl_vector *point, const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle) const {
+  double V[6];
+  gsl_matrix_view V_view = gsl_matrix_view_array(V, 3, 2);
+  to_matrix(verts, supertriangle, &V_view.matrix);
+  return ::is_in_circumcircle(point, &V_view.matrix);
+}
+
+void Triangle::to_edges(Edge &a, Edge &b, Edge &c) const {
+  a = Edge(A, B);
+  b = Edge(B, C);
+  c = Edge(C, A);
+}
+
+void save_triangulation(const std::filesystem::path fn, const size_t i, const gsl_matrix *verts, const gsl_matrix *supertriangle, const std::vector<Triangle> &triangles) {
+  Gnuplot gp;
+  gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";
+  gp << "set output " << fn << "\n"; // be warned -- this may not be sanitised
+  gp << "set yrange[-2.5:6]\nset xrange[-5:5]\n";
+
+  gp << "set key off\n";
+  gp << "plot '-' with circles, "; // for the points
+
+  // add the edges to an unordered set
+  // this will make plotting easier
+  std::unordered_set<Edge> edges;
+  for (const Triangle &tri : triangles) {
+    Edge A; Edge B; Edge C;
+    tri.to_edges(A, B, C);
+    edges.insert(A);
+    edges.insert(B);
+    edges.insert(C);
+  }
+
+  // add a curve for every edge
+  const size_t N_edges = edges.size();
+  for (size_t i = 1; i < N_edges; ++i) {
+    gp << "'-' with lines, ";
+  }
+  gp << "'-' with lines\n";
+
+  double X[2];
+  gsl_vector_view X_view = gsl_vector_view_array(X, 2);
+  
+  for (int row = 0; row <= i; ++row) {
+    get_point(row, verts, supertriangle, &X_view.vector);
+    gp << gsl_vector_get(&X_view.vector, 0) << " ";
+    gp << gsl_vector_get(&X_view.vector, 1) << "\n";
+  }
+  gp << "e\n";
+
+  // draw the lines
+  std::cout << "Drawing " << edges.size() << " edges" << std::endl;
+  for (const Edge &e : edges) {
+    get_point(e.A, verts, supertriangle, &X_view.vector);
+    gp << gsl_vector_get(&X_view.vector, 0) << " ";
+    gp << gsl_vector_get(&X_view.vector, 1) << "\n";
+    get_point(e.B, verts, supertriangle, &X_view.vector);
+    gp << gsl_vector_get(&X_view.vector, 0) << " ";
+    gp << gsl_vector_get(&X_view.vector, 1) << "\ne\n";
+  }
+}
+
+// Takes a gsl matrix of vertices (must be Nx2) and determines the
+// Delaunay triangulation of these vertices.
+// Returns a C++ vector containing the indices of the vertices forming
+// each triangle. The length of the vector will be a multiple of
+// three, and each number corresponds to a row of the input
+// matrix. Each group of three numbers in the vector points to three
+// vertices forming a triangle in the Delaunay triangulation.
+std::vector<Triangle>
+delaunay_triangulate(const gsl_matrix *verts) {
+  std::vector<Triangle> triangles;
+
+  double supertriangle[6];
+  gsl_matrix_view st_view = gsl_matrix_view_array(supertriangle, 3, 2);
+  make_supertriangle(verts, &st_view.matrix);
+
+  // add the supertriangle to the triangles list
+  const double N = verts->size1;
+  triangles.push_back(Triangle(N, N+1, N+2));
+
+  // go through all points, including the supertriangle points
+  double point[2];
+  gsl_vector_view p_view = gsl_vector_view_array(point, 2);
+  gsl_vector *p = &p_view.vector; // not entirely safe, but p_view will never go out of scope
+  size_t frame = 0;
+  for (size_t i = 0; i < (N+3); ++i) {
+    // save the triangulation in its current state
+    char buf[50];
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
+    ++frame;
+    
+    // retrieve the point
+    get_point(i, verts, &st_view.matrix, p);
+    
+    std::unordered_map<Edge,size_t> edges;
+
+    // find all triangles the point lies inside, and add their edges
+    // to the edges set
+    std::vector<size_t> to_remove;
+    for (size_t j = 0; j < triangles.size(); ++j) {
+      const Triangle &tri = triangles.at(j);
+      if (tri.is_in_circumcircle(p, verts, &st_view.matrix)) {
+        Edge A; Edge B; Edge C;
+        tri.to_edges(A, B, C);
+        // this construction is safe
+        // if the key does not exist, it will be initialised to 0 first
+        // https://stackoverflow.com/a/48844516
+        edges[A] += 1;
+        edges[B] += 1;
+        edges[C] += 1;
+        // mark this triangle for removal
+        to_remove.insert(to_remove.begin(), j);
+      }
+    }
+
+    std::cout << "Marked " << to_remove.size() << " triangles to remove" << std::endl;
+    std::cout << edges.size() << " unique edges" << std::endl;
+
+    // remove all triangles
+    // we've added them to the front, so we can safely just iterate
+    const size_t prev_length = triangles.size();
+    for (size_t j : to_remove) {
+      std::cout << "Removing " << j << std::endl;
+      auto it = triangles.begin();
+      std::advance(it, j);
+      triangles.erase(it);
+    }
+    const size_t new_length = triangles.size();
+    std::cout << "Culled triangles from " << prev_length << " to " << new_length << std::endl;
+
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
+    ++frame;
+
+    // construct new triangles from each edge + the point
+    for (auto edge : edges) {
+      if (edge.second == 1) {
+        const Triangle tri(edge.first.A, edge.first.B, i);
+        triangles.push_back(tri);
+      }
+    }
+    std::cout << "Added triangles from " << new_length << " to " << triangles.size() << std::endl;
+
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
+    ++frame;
+  }
+
+  // drop any triangles that contain the supertriangle vertices
+  std::vector<size_t> to_remove;
+  for (size_t j = 0; j < triangles.size(); ++j) {
+    const Triangle &tri = triangles.at(j);
+    if (tri.A >= N || tri.B >= N || tri.C >= N) {
+      to_remove.insert(to_remove.begin(), j);
+    }
+  }
+  for (size_t j : to_remove) {
+    auto it = triangles.begin();
+    std::advance(it, j);
+    triangles.erase(it);
+  }
+
+  char buf[50];
+  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+  save_triangulation(buf, N-1, verts, &st_view.matrix, triangles);
+
+  return triangles;
+}

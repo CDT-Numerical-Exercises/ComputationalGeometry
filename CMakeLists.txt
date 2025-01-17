@@ -29,6 +29,7 @@ add_executable(anim_test anim_test.cpp ${sources} ${headers})
 add_executable(supertriangle supertriangle.cpp ${sources} ${headers})
 add_executable(circumcentre circumcentre.cpp ${sources} ${headers})
 add_executable(test_edge_set edge_set.cpp ${sources} ${headers})
+add_executable(delaunay delaunay.cpp ${sources} ${headers})
 
 # add libraries
 find_package(GSL REQUIRED)
@@ -43,3 +44,4 @@ target_link_libraries(anim_test GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(supertriangle GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(circumcentre GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(test_edge_set GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
+target_link_libraries(delaunay GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
