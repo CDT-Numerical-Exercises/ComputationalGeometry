@@ -1,5 +1,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <vector>
+#include <unordered_set>
+#include <boost/container_hash/hash.hpp>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
 
@@ -37,7 +40,7 @@ int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double
   }
 
   double ymin = gsl_matrix_get(data, 0, 1);
-  double ymax = xmin;
+  double ymax = ymin;
   for (int row = 1; row < data->size1; ++row) {
     double v = gsl_matrix_get(data, row, 1);
     if (v < ymin) ymin = v;
@@ -121,3 +124,31 @@ bool is_in_circumcircle(const gsl_vector *point, const gsl_matrix *verts) {
   find_circumcircle(verts, r, &X_view.vector);
   return is_in_circumcircle(point, r, &X_view.vector);
 }
+
+/*
+  Define everything we need to use Edge in an unordered set
+*/
+
+bool Edge::operator==(const Edge b) const {
+  return ((A == b.A && B == b.B) || (A == b.B && B == b.A));
+}
+
+// computes a hash that's independent of the order the vertices are
+// specified in. This allows Edge(a, b) to be recognised as the same
+// thing as Edge(b, a).
+std::size_t hash_value(Edge const &p) {
+  size_t seed = 0;
+  if (p.A > p.B) {
+    boost::hash_combine(seed, p.A);
+    boost::hash_combine(seed, p.B);
+    return seed;
+  }
+  boost::hash_combine(seed, p.B);
+  boost::hash_combine(seed, p.A);
+  return seed;
+}
+
+/*
+  ===============
+*/
+
