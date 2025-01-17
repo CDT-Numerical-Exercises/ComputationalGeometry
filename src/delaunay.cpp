@@ -113,3 +113,11 @@ bool is_in_circumcircle(const gsl_vector *point, const double r, const gsl_vecto
   gsl_vector_sub(&p_view.vector, X);
   return gsl_blas_dnrm2(&p_view.vector) <= r;
 }
+
+bool is_in_circumcircle(const gsl_vector *point, const gsl_matrix *verts) {
+  double r;
+  double X[2];
+  gsl_vector_view X_view = gsl_vector_view_array(X, 2);
+  find_circumcircle(verts, r, &X_view.vector);
+  return is_in_circumcircle(point, r, &X_view.vector);
+}
