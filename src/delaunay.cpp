@@ -254,7 +254,6 @@ void save_triangulation(const std::filesystem::path fn, const size_t i, const gs
   gp << "e\n";
 
   // draw the lines
-  std::cout << "Drawing " << edges.size() << " edges" << std::endl;
   for (const Edge &e : edges) {
     get_point(e.A, verts, supertriangle, &X_view.vector);
     gp << gsl_vector_get(&X_view.vector, 0) << " ";
@@ -320,20 +319,13 @@ delaunay_triangulate(const gsl_matrix *verts) {
       }
     }
 
-    std::cout << "Marked " << to_remove.size() << " triangles to remove" << std::endl;
-    std::cout << edges.size() << " unique edges" << std::endl;
-
     // remove all triangles
     // we've added them to the front, so we can safely just iterate
-    const size_t prev_length = triangles.size();
     for (size_t j : to_remove) {
-      std::cout << "Removing " << j << std::endl;
       auto it = triangles.begin();
       std::advance(it, j);
       triangles.erase(it);
     }
-    const size_t new_length = triangles.size();
-    std::cout << "Culled triangles from " << prev_length << " to " << new_length << std::endl;
 
     snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
     save_triangulation(buf, i, verts, &st_view.matrix, triangles);
@@ -346,7 +338,6 @@ delaunay_triangulate(const gsl_matrix *verts) {
         triangles.push_back(tri);
       }
     }
-    std::cout << "Added triangles from " << new_length << " to " << triangles.size() << std::endl;
 
     snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
     save_triangulation(buf, i, verts, &st_view.matrix, triangles);

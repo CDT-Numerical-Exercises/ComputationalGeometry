@@ -60,7 +60,6 @@ int main() {
 
   // draw the lines
   for (const Edge &e : edges) {
-    std::cout << e.A << " " << e.B << std::endl;
     gsl_vector_const_view A_view = gsl_matrix_const_row(&d_view.matrix, e.A);
     gp << gsl_vector_get(&A_view.vector, 0) << " " << gsl_vector_get(&A_view.vector, 1) << "\n";
     gsl_vector_const_view B_view = gsl_matrix_const_row(&d_view.matrix, e.B);
