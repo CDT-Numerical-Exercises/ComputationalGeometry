@@ -28,7 +28,7 @@ union Supertriangle {
 
 // outputs the vertices of the supertriangle to the supertriangle matrix.
 // this should be a pre-allocated 3x2 matrix
-int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double delta) {
+int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, const double dscale) {
   if (supertriangle->size1 != 3 && supertriangle->size2 != 2) {
     GSL_ERROR("supertriangle should be 3x2", GSL_EINVAL);
     return -1;
@@ -58,6 +58,48 @@ int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double
   S.Bx = xmin - IR3*(ymax - ymin);
   S.Ay = (S.Ax - S.Bx)*R3 + ymin;
   S.Cx = 2*S.Ax - S.Bx;
+
+  // determine delta
+
+  /*////////////////////
+  // Here be dragons! //
+  //////////////////////
+
+  Most sources say that it's sufficient for the supertriangle to be
+  large enough to include all vertices. This doesn't seem to be
+  true. If we use a fixed delta here, e.g. delta = 1, then the larger
+  the range of the vertices, the more errors we see in the
+  triangulation.
+
+  If the supertriangle is too close to the rest of the vertices, the
+  algorithm seems to miss thinner triangles (those where the vertices
+  are approaching colinearity) near the edge of the final
+  triangulation, leading to it being slightly non-convex. According to
+  [1], this is because the supertriangle vertices should ideally lie
+  outside of all possible circumcircles, rather than just outside the
+  data. When the vertices are too close to the data, this is not
+  satisfied for the very thin triangles (which will have very large
+  circumcircles).
+
+  The ideal solution according to [1] would be to position the
+  supertriangle vertices at infinity. In this case, any edges it would
+  form with other vertices should be parallel. This is theoretically
+  doable, but would be pretty grim. Instead, it should be sufficient
+  to choose delta relative to the range of the vertices, rather than a
+  fixed constant. For this reason, I'm using dscale, and defining
+  delta as dscale * the maximum variation. The default dscale = 100
+  should be okay in most circumstances, and in theory there shouldn't
+  be a major penalty for increasing dscale if needed, but this seems
+  to fix the issues I was seeing.
+
+  References:
+    [1] https://math.stackexchange.com/a/4001825
+
+  */
+  const double xvar = xmax-xmin;
+  const double yvar = ymax-ymin;
+  const double max_var = xvar > yvar ? xvar : yvar;
+  const double delta = max_var * dscale;
 
   // add delta
   S.Ay += delta;
@@ -217,32 +259,34 @@ void Triangle::to_edges(Edge &a, Edge &b, Edge &c) const {
 }
 
 void save_triangulation(const std::filesystem::path fn, const size_t i, const gsl_matrix *verts, const gsl_matrix *supertriangle, const std::vector<Triangle> &triangles) {
-  #ifdef ROBUST_BOUNDS
-  // figure out the bounds from the supertriangle
-  double xmin = gsl_matrix_get(supertriangle, 0, 0);
+  // figure out the bounds from the data
+  // TODO: this is slow, we should calculate it elsewhere and pass it in
+  double xmin = gsl_matrix_get(verts, 0, 0);
   double xmax = xmin;
-  for (int row = 1; row < supertriangle->size1; ++row) {
-    double v = gsl_matrix_get(supertriangle, row, 0);
+  for (int row = 1; row < verts->size1; ++row) {
+    double v = gsl_matrix_get(verts, row, 0);
     if (v < xmin) xmin = v;
     if (v > xmax) xmax = v;
   }
 
-  double ymin = gsl_matrix_get(supertriangle, 0, 1);
+  double ymin = gsl_matrix_get(verts, 0, 1);
   double ymax = ymin;
-  for (int row = 1; row < supertriangle->size1; ++row) {
-    double v = gsl_matrix_get(supertriangle, row, 1);
+  for (int row = 1; row < verts->size1; ++row) {
+    double v = gsl_matrix_get(verts, row, 1);
     if (v < ymin) ymin = v;
     if (v > ymax) ymax = v;
   }
-  #else
+
+  //
+  // This is useless when supertriangle is massive (as it should be)
+  //
   // faster way of getting the bounds is to use the known structure of
   // the supertriangle matrix
   // this is a little less robusts, but should be a bit faster
-  const double xmin = gsl_matrix_get(supertriangle, 1, 0);
-  const double xmax = gsl_matrix_get(supertriangle, 2, 0);
-  const double ymin = gsl_matrix_get(supertriangle, 1, 1);
-  const double ymax = gsl_matrix_get(supertriangle, 0, 1);
-  #endif
+  // const double xmin = gsl_matrix_get(supertriangle, 1, 0);
+  // const double xmax = gsl_matrix_get(supertriangle, 2, 0);
+  // const double ymin = gsl_matrix_get(supertriangle, 1, 1);
+  // const double ymax = gsl_matrix_get(supertriangle, 0, 1);
   
   Gnuplot gp;
   gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";

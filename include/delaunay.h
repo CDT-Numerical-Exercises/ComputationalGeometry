@@ -45,7 +45,7 @@ private:
   friend std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts);
 };
 
-int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, double delta = 1);
+int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, const double dscale = 100);
 int find_circumcircle(const gsl_matrix *points, double &r, gsl_vector *X);
 
 std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts);
