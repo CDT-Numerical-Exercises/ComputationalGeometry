@@ -217,10 +217,38 @@ void Triangle::to_edges(Edge &a, Edge &b, Edge &c) const {
 }
 
 void save_triangulation(const std::filesystem::path fn, const size_t i, const gsl_matrix *verts, const gsl_matrix *supertriangle, const std::vector<Triangle> &triangles) {
+  #ifdef ROBUST_BOUNDS
+  // figure out the bounds from the supertriangle
+  double xmin = gsl_matrix_get(supertriangle, 0, 0);
+  double xmax = xmin;
+  for (int row = 1; row < supertriangle->size1; ++row) {
+    double v = gsl_matrix_get(supertriangle, row, 0);
+    if (v < xmin) xmin = v;
+    if (v > xmax) xmax = v;
+  }
+
+  double ymin = gsl_matrix_get(supertriangle, 0, 1);
+  double ymax = ymin;
+  for (int row = 1; row < supertriangle->size1; ++row) {
+    double v = gsl_matrix_get(supertriangle, row, 1);
+    if (v < ymin) ymin = v;
+    if (v > ymax) ymax = v;
+  }
+  #else
+  // faster way of getting the bounds is to use the known structure of
+  // the supertriangle matrix
+  // this is a little less robusts, but should be a bit faster
+  const double xmin = gsl_matrix_get(supertriangle, 1, 0);
+  const double xmax = gsl_matrix_get(supertriangle, 2, 0);
+  const double ymin = gsl_matrix_get(supertriangle, 1, 1);
+  const double ymax = gsl_matrix_get(supertriangle, 0, 1);
+  #endif
+  
   Gnuplot gp;
   gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";
   gp << "set output " << fn << "\n"; // be warned -- this may not be sanitised
-  gp << "set yrange[-2.5:6]\nset xrange[-5:5]\n";
+  gp << "set yrange[" << ymin << ":" << ymax << "]\n";
+  gp << "set xrange[" << xmin << ":" << xmax << "]\n";
 
   gp << "set key off\n";
   gp << "plot '-' with circles, "; // for the points
