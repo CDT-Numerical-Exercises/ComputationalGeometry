@@ -17,10 +17,15 @@ const double data[4*2] = {
   1, -0.25
 };
 
-int main() {
+int main(int argc, char *argv[]) {
   const gsl_matrix_const_view d_view = gsl_matrix_const_view_array(data, 4, 2);
 
-  std::vector<Triangle> triangulation = delaunay_triangulate(&d_view.matrix);
+  std::vector<Triangle> triangulation;
+  if (argc < 2) {
+    triangulation = delaunay_triangulate(&d_view.matrix);
+  } else {
+    triangulation = delaunay_triangulate(&d_view.matrix, argv[1]);
+  }
 
   std::cout << "Triangulation produced " << triangulation.size() << " triangles." << std::endl;
 
