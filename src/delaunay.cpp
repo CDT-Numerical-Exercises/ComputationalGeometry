@@ -258,9 +258,32 @@ void Triangle::to_edges(Edge &a, Edge &b, Edge &c) const {
   c = Edge(C, A);
 }
 
-void save_triangulation(const std::filesystem::path fn, const size_t i, const gsl_matrix *verts, const gsl_matrix *supertriangle, const std::vector<Triangle> &triangles) {
+// forward declarations
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles,
+                        const double xmin, const double xmax,
+                        const double ymin, const double ymax);
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles);
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles,
+                        const double xr[2], const double yr[2]);
+//
+
+// save triangulation with dynamically-determined bounds
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles) {
   // figure out the bounds from the data
-  // TODO: this is slow, we should calculate it elsewhere and pass it in
+  // ideally, we should calculate it elsewhere and pass it in
+  // this option is provided for legacy reasons
   double xmin = gsl_matrix_get(verts, 0, 0);
   double xmax = xmin;
   for (int row = 1; row < verts->size1; ++row) {
@@ -277,22 +300,34 @@ void save_triangulation(const std::filesystem::path fn, const size_t i, const gs
     if (v > ymax) ymax = v;
   }
 
-  //
-  // This is useless when supertriangle is massive (as it should be)
-  //
-  // faster way of getting the bounds is to use the known structure of
-  // the supertriangle matrix
-  // this is a little less robusts, but should be a bit faster
-  // const double xmin = gsl_matrix_get(supertriangle, 1, 0);
-  // const double xmax = gsl_matrix_get(supertriangle, 2, 0);
-  // const double ymin = gsl_matrix_get(supertriangle, 1, 1);
-  // const double ymax = gsl_matrix_get(supertriangle, 0, 1);
-  
+  save_triangulation(fn, i, verts, supertriangle, triangles, xmin, xmax, ymin, ymax);
+}
+
+// save triangulation with bounds fed from fixed-length arrays
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles,
+                        const double xr[2], const double yr[2]) {
+  const double xmin = xr[0];
+  const double xmax = xr[1];
+  const double ymin = yr[0];
+  const double ymax = yr[1];
+  save_triangulation(fn, i, verts, supertriangle, triangles, xmin, xmax, ymin, ymax);
+}
+
+// save triangulation with bounds fed as explicit arguments
+void save_triangulation(const std::filesystem::path fn, const size_t i,
+                        const gsl_matrix *verts,
+                        const gsl_matrix *supertriangle,
+                        const std::vector<Triangle> &triangles,
+                        const double xmin, const double xmax,
+                        const double ymin, const double ymax) {
   Gnuplot gp;
   gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";
   gp << "set output " << fn << "\n"; // be warned -- this may not be sanitised
-  gp << "set yrange[" << ymin << ":" << ymax << "]\n";
-  gp << "set xrange[" << xmin << ":" << xmax << "]\n";
+  gp << "set yrange[" << ymin-0.5 << ":" << ymax+0.5 << "]\n";
+  gp << "set xrange[" << xmin-0.5 << ":" << xmax+0.5 << "]\n";
 
   gp << "set key off\n";
   gp << "plot '-' with circles, "; // for the points
