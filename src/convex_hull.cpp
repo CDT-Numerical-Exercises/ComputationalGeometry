@@ -62,7 +62,7 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
       // remove the middle of the last 3 points
       // i.e. the second to last point
       --current_length;
-      auto it = std::prev(Lupper.end());
+      auto it = std::prev(std::prev(Lupper.end()));
       Lupper.erase(it);
     }
   }
@@ -77,19 +77,18 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
       // remove the middle of the last 3 points
       // i.e. the second to last point
       --current_length;
-      auto it = std::prev(Llower.end());
+      auto it = std::prev(std::prev(Llower.end()));
       Llower.erase(it);
     }
   }
 
   // remove the first and last points
   Llower.erase(Llower.begin());
-  Llower.erase(Llower.end());
+  Llower.erase(std::prev(Llower.end()));
 
   // glue the vectors together
-  auto end = Lupper.end();
   Lupper.reserve(Lupper.size() + Llower.size());
-  Lupper.insert(end, Llower.begin(), Llower.end());
+  Lupper.insert(Lupper.end(), Llower.begin(), Llower.end());
 
   return Lupper;
 }
