@@ -14,7 +14,7 @@
 int main() {
   gsl_matrix *data = load_csv_to_dmatrix("comp-geom-data.csv");
 
-  std::vector<Triangle> triangulation = delaunay_triangulate(data);
+  std::vector<Triangle> triangulation = delaunay_triangulate(data, "./frames");
 
   std::cout << "Triangulation produced " << triangulation.size() << " triangles." << std::endl;
 

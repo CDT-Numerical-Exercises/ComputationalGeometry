@@ -379,7 +379,7 @@ void save_triangulation(const std::filesystem::path fn, const size_t i,
 // matrix. Each group of three numbers in the vector points to three
 // vertices forming a triangle in the Delaunay triangulation.
 std::vector<Triangle>
-delaunay_triangulate(const gsl_matrix *verts) {
+delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir, const bool save_anim) {
   std::vector<Triangle> triangles;
 
   double supertriangle[6];
@@ -398,10 +398,12 @@ delaunay_triangulate(const gsl_matrix *verts) {
   for (size_t i = 0; i < (N+3); ++i) {
     // save the triangulation in its current state
     char buf[50];
-    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
-    ++frame;
-    
+    if (save_anim) {
+      snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      ++frame;
+    }
+
     // retrieve the point
     get_point(i, verts, &st_view.matrix, p);
     
@@ -434,9 +436,11 @@ delaunay_triangulate(const gsl_matrix *verts) {
       triangles.erase(it);
     }
 
-    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
-    ++frame;
+    if (save_anim) {
+      snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      ++frame;
+    }
 
     // construct new triangles from each edge + the point
     for (auto edge : edges) {
@@ -446,9 +450,11 @@ delaunay_triangulate(const gsl_matrix *verts) {
       }
     }
 
-    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_triangulation(buf, i, verts, &st_view.matrix, triangles);
-    ++frame;
+    if (save_anim) {
+      snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      ++frame;
+    }
   }
 
   // drop any triangles that contain the supertriangle vertices
@@ -465,9 +471,24 @@ delaunay_triangulate(const gsl_matrix *verts) {
     triangles.erase(it);
   }
 
-  char buf[50];
-  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-  save_triangulation(buf, N-1, verts, &st_view.matrix, triangles);
+  if (save_anim) {
+    char buf[50];
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_triangulation(frame_dir / buf, N - 1, verts, &st_view.matrix,
+                       triangles);
+  }
 
   return triangles;
+}
+
+// overloaded definitions to provide easier animation saving functionality
+
+std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts) {
+  return delaunay_triangulate(verts, "", false);
+}
+
+std::vector<Triangle>
+delaunay_triangulate(const gsl_matrix *verts,
+                     const std::filesystem::path frame_dir) {
+  return delaunay_triangulate(verts, frame_dir, true);
 }

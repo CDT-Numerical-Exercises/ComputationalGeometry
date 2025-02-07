@@ -2,6 +2,7 @@
 #define DELAUNAY_H 1
 
 #include <vector>
+#include <filesystem>
 #include <gsl/gsl_matrix.h>
 
 struct Edge {
@@ -42,12 +43,13 @@ public:
 private:
   bool is_in_circumcircle(const gsl_vector *point, const gsl_matrix *verts, const gsl_matrix *supertriangle) const;
 
-  friend std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts);
+  friend std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir, const bool save_anim);
 };
 
 int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, const double dscale = 100);
 int find_circumcircle(const gsl_matrix *points, double &r, gsl_vector *X);
 
 std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts);
+std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir);
 
 #endif
