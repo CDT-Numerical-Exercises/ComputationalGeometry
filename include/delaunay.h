@@ -43,7 +43,8 @@ public:
 private:
   bool is_in_circumcircle(const gsl_vector *point, const gsl_matrix *verts, const gsl_matrix *supertriangle) const;
 
-  friend std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir, const bool save_anim);
+  template <bool save_anim>
+  friend std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir);
 };
 
 int make_supertriangle(const gsl_matrix *data, gsl_matrix *supertriangle, const double dscale = 100);

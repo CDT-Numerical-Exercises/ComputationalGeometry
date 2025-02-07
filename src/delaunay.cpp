@@ -258,6 +258,25 @@ void Triangle::to_edges(Edge &a, Edge &b, Edge &c) const {
   c = Edge(C, A);
 }
 
+void get_data_bounds(const gsl_matrix *verts, double &xmin, double &xmax,
+                     double &ymin, double &ymax) {
+  xmin = gsl_matrix_get(verts, 0, 0);
+  xmax = xmin;
+  for (int row = 1; row < verts->size1; ++row) {
+    double v = gsl_matrix_get(verts, row, 0);
+    if (v < xmin) xmin = v;
+    if (v > xmax) xmax = v;
+  }
+
+  ymin = gsl_matrix_get(verts, 0, 1);
+  ymax = ymin;
+  for (int row = 1; row < verts->size1; ++row) {
+    double v = gsl_matrix_get(verts, row, 1);
+    if (v < ymin) ymin = v;
+    if (v > ymax) ymax = v;
+  }
+}
+
 // forward declarations
 void save_triangulation(const std::filesystem::path fn, const size_t i,
                         const gsl_matrix *verts,
@@ -284,22 +303,8 @@ void save_triangulation(const std::filesystem::path fn, const size_t i,
   // figure out the bounds from the data
   // ideally, we should calculate it elsewhere and pass it in
   // this option is provided for legacy reasons
-  double xmin = gsl_matrix_get(verts, 0, 0);
-  double xmax = xmin;
-  for (int row = 1; row < verts->size1; ++row) {
-    double v = gsl_matrix_get(verts, row, 0);
-    if (v < xmin) xmin = v;
-    if (v > xmax) xmax = v;
-  }
-
-  double ymin = gsl_matrix_get(verts, 0, 1);
-  double ymax = ymin;
-  for (int row = 1; row < verts->size1; ++row) {
-    double v = gsl_matrix_get(verts, row, 1);
-    if (v < ymin) ymin = v;
-    if (v > ymax) ymax = v;
-  }
-
+  double xmin, xmax, ymin, ymax;
+  get_data_bounds(verts, xmin, xmax, ymin, ymax);
   save_triangulation(fn, i, verts, supertriangle, triangles, xmin, xmax, ymin, ymax);
 }
 
@@ -378,8 +383,15 @@ void save_triangulation(const std::filesystem::path fn, const size_t i,
 // three, and each number corresponds to a row of the input
 // matrix. Each group of three numbers in the vector points to three
 // vertices forming a triangle in the Delaunay triangulation.
+template <bool save_anim>
 std::vector<Triangle>
-delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir, const bool save_anim) {
+delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_dir) {
+  // pre-compute the bounds for saving
+  double xmin, xmax, ymin, ymax;
+  if constexpr (save_anim) {
+    get_data_bounds(verts, xmin, xmax, ymin, ymax);
+  }
+
   std::vector<Triangle> triangles;
 
   double supertriangle[6];
@@ -398,9 +410,10 @@ delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_
   for (size_t i = 0; i < (N+3); ++i) {
     // save the triangulation in its current state
     char buf[50];
-    if (save_anim) {
+    if constexpr (save_anim) {
       snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles,
+                         xmin, xmax, ymin, ymax);
       ++frame;
     }
 
@@ -436,9 +449,10 @@ delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_
       triangles.erase(it);
     }
 
-    if (save_anim) {
+    if constexpr (save_anim) {
       snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles,
+                         xmin, xmax, ymin, ymax);
       ++frame;
     }
 
@@ -450,9 +464,10 @@ delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_
       }
     }
 
-    if (save_anim) {
+    if constexpr (save_anim) {
       snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles);
+      save_triangulation(frame_dir / buf, i, verts, &st_view.matrix, triangles,
+                         xmin, xmax, ymin, ymax);
       ++frame;
     }
   }
@@ -471,11 +486,12 @@ delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_
     triangles.erase(it);
   }
 
-  if (save_anim) {
+  if constexpr (save_anim) {
     char buf[50];
     snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
     save_triangulation(frame_dir / buf, N - 1, verts, &st_view.matrix,
-                       triangles);
+                       triangles,
+                       xmin, xmax, ymin, ymax);
   }
 
   return triangles;
@@ -484,7 +500,7 @@ delaunay_triangulate(const gsl_matrix *verts, const std::filesystem::path frame_
 // overloaded definitions to provide easier animation saving functionality
 
 std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts) {
-  return delaunay_triangulate(verts, "", false);
+  return delaunay_triangulate<false>(verts, "");
 }
 
 std::vector<Triangle>
@@ -494,5 +510,5 @@ delaunay_triangulate(const gsl_matrix *verts,
   if (!std::filesystem::exists(frame_dir)) {
     std::filesystem::create_directory(frame_dir);
   }
-  return delaunay_triangulate(verts, frame_dir, true);
+  return delaunay_triangulate<true>(verts, frame_dir);
 }
