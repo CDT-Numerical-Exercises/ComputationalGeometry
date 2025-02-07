@@ -31,6 +31,7 @@ add_executable(circumcentre circumcentre.cpp ${sources} ${headers})
 add_executable(test_edge_set edge_set.cpp ${sources} ${headers})
 add_executable(delaunay delaunay.cpp ${sources} ${headers})
 add_executable(problem1 problem1.cpp ${sources} ${headers})
+add_executable(check_turns check_turns.cpp ${sources} ${headers})
 
 # add runtime dependencies
 configure_file(comp-geom-data.csv comp-geom-data.csv COPYONLY)
@@ -50,3 +51,4 @@ target_link_libraries(circumcentre GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(test_edge_set GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(delaunay GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
 target_link_libraries(problem1 GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
+target_link_libraries(check_turns GSL::gsl GSL::gslcblas ${Boost_LIBRARIES})
