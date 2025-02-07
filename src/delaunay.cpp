@@ -490,5 +490,9 @@ std::vector<Triangle> delaunay_triangulate(const gsl_matrix *verts) {
 std::vector<Triangle>
 delaunay_triangulate(const gsl_matrix *verts,
                      const std::filesystem::path frame_dir) {
+  // create the directory if it doesn't exist
+  if (!std::filesystem::exists(frame_dir)) {
+    std::filesystem::create_directory(frame_dir);
+  }
   return delaunay_triangulate(verts, frame_dir, true);
 }
