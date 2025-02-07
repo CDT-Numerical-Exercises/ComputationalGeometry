@@ -84,7 +84,8 @@ void save_convex_hull(const std::filesystem::path fn, const gsl_matrix *verts,
 // returns a vector of integers corresponding to the indices of the
 // vertices in the input matrix. These are in order to create a
 // clockwise convex hull.
-std::vector<size_t> convex_hull(const gsl_matrix *verts) {
+template <bool save_anim>
+std::vector<size_t> convex_hull(const gsl_matrix *verts, const std::filesystem::path frame_dir) {
   char buf[50];
   size_t frame = 0;
   
@@ -93,16 +94,20 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
 
   // iterate starting from i = 2
   std::vector<size_t> Lupper = { points[0], points[1] };
-  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-  save_convex_hull(buf, verts, Lupper);
-  ++frame;
+  if constexpr (save_anim) {
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_convex_hull(frame_dir / buf, verts, Lupper);
+    ++frame;
+  }
   for (size_t i = 2; i < points.size(); ++i) {
     Lupper.push_back(points[i]);
 
-    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_convex_hull(buf, verts, Lupper);
-    ++frame;
-    
+    if constexpr (save_anim) {
+      snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+      save_convex_hull(frame_dir / buf, verts, Lupper);
+      ++frame;
+    }
+
     // remove points until the last turn is a right turn, or we don't
     // have enough points to define a right turn.
     // right turn is when D < 0
@@ -116,21 +121,27 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
     }
   }
 
-  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-  save_convex_hull(buf, verts, Lupper);
-  ++frame;
+  if constexpr (save_anim) {
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_convex_hull(frame_dir / buf, verts, Lupper);
+    ++frame;
+  }
 
   // iterate backwards
   std::vector<size_t> Llower = { points[n_points - 1], points[n_points - 2] };
-  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-  save_convex_hull(buf, verts, Lupper, Llower);
-  ++frame;
+  if constexpr (save_anim) {
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_convex_hull(frame_dir / buf, verts, Lupper, Llower);
+    ++frame;
+  }
   for (size_t i = n_points - 2; i > 0; --i) {
     Llower.push_back(points[i-1]);
 
-    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_convex_hull(buf, verts, Lupper, Llower);
-    ++frame;
+    if constexpr (save_anim) {
+      snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+      save_convex_hull(frame_dir / buf, verts, Lupper, Llower);
+      ++frame;
+    }
 
     size_t current_length = Llower.size();
     while (current_length > 2 && calculate_D(verts, Llower[current_length - 3], Llower[current_length - 2], Llower[current_length - 1]) > 0) {
@@ -142,9 +153,11 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
     }
   }
 
-  snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-  save_convex_hull(buf, verts, Lupper, Llower);
-  ++frame;
+  if constexpr (save_anim) {
+    snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
+    save_convex_hull(frame_dir / buf, verts, Lupper, Llower);
+    ++frame;
+  }
 
   // remove the first and last points
   Llower.erase(Llower.begin());
@@ -154,13 +167,25 @@ std::vector<size_t> convex_hull(const gsl_matrix *verts) {
   Lupper.reserve(Lupper.size() + Llower.size());
   Lupper.insert(Lupper.end(), Llower.begin(), Llower.end());
 
-  {
+  if constexpr (save_anim) {
     std::vector<size_t> L(Lupper);
     L.push_back(L[0]);
     snprintf(buf, sizeof(buf), "frame%03lu.png", frame);
-    save_convex_hull(buf, verts, L);
+    save_convex_hull(frame_dir / buf, verts, L);
     ++frame;
   }
 
   return Lupper;
+}
+
+std::vector<size_t> convex_hull(const gsl_matrix *verts) {
+  return convex_hull<false>(verts, "");
+}
+
+std::vector<size_t> convex_hull(const gsl_matrix *verts, const std::filesystem::path frame_dir) {
+  // create the directory if it doesn't exist
+  if (!std::filesystem::exists(frame_dir)) {
+    std::filesystem::create_directory(frame_dir);
+  }
+  return convex_hull<true>(verts, frame_dir);
 }

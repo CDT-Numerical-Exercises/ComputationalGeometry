@@ -18,10 +18,15 @@ const double data[10*2] = {
   0.27, 0.09
 };
 
-int main() {
+int main(int argc, char *argv[]) {
   const gsl_matrix_const_view d_view = gsl_matrix_const_view_array(data, 10, 2);
 
-  std::vector<size_t> hull = convex_hull(&d_view.matrix);
+  std::vector<size_t> hull;
+  if (argc < 2) {
+    hull = convex_hull(&d_view.matrix);
+  } else {
+    hull = convex_hull(&d_view.matrix, argv[1]);
+  }
 
   std::cout << "Hull contains " << hull.size() << " points" << std::endl;
 
