@@ -37,9 +37,6 @@ endif()
 add_executable(problem1 problem1.cpp ${sources} ${headers})
 add_executable(problem2 problem2.cpp ${sources} ${headers})
 
-# add runtime dependencies
-configure_file(comp-geom-data.csv comp-geom-data.csv COPYONLY)
-
 # add libraries
 find_package(GSL REQUIRED)
 

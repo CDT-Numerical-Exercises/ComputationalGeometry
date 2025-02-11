@@ -8,13 +8,18 @@
 #include "csv.h"
 
 int main(int argc, char *argv[]) {
-  gsl_matrix *data = load_csv_to_dmatrix("comp-geom-data.csv");
+  if (argc < 2) {
+    std::cerr << "Requires path to CSV file as arg." << std::endl;
+    return 1;
+  }
+
+  gsl_matrix *data = load_csv_to_dmatrix(argv[1]);
 
   std::vector<size_t> hull;
-  if (argc < 2) {
+  if (argc < 3) {
     hull = convex_hull(data);
   } else {
-    hull = convex_hull(data, argv[1]);
+    hull = convex_hull(data, argv[2]);
   }
 
   std::cout << "Hull contains " << hull.size() << " points" << std::endl;

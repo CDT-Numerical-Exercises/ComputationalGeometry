@@ -12,13 +12,18 @@
 #include "csv.h"
 
 int main(int argc, char *argv[]) {
-  gsl_matrix *data = load_csv_to_dmatrix("comp-geom-data.csv");
+  if (argc < 2) {
+    std::cerr << "Requires path to CSV file as arg." << std::endl;
+    return 1;
+  }
+
+  gsl_matrix *data = load_csv_to_dmatrix(argv[1]);
 
   std::vector<Triangle> triangulation;
-  if (argc < 2) {
+  if (argc < 3) {
     triangulation = delaunay_triangulate(data);
   } else {
-    triangulation = delaunay_triangulate(data, argv[1]);
+    triangulation = delaunay_triangulate(data, argv[2]);
   }
 
   std::cout << "Triangulation produced " << triangulation.size() << " triangles." << std::endl;
