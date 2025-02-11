@@ -47,7 +47,7 @@ std::vector<size_t> argsort_by_x(const gsl_matrix *verts) {
 void save_convex_hull(const std::filesystem::path fn, const gsl_matrix *verts,
                       const std::vector<size_t> Lupper) {
   Gnuplot gp;
-  gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";
+  gp << "set terminal pngcairo size 640,480 enhanced font 'Verdana,10'\n";
   gp << "set output " << fn << "\n"; // be warned -- this may not be sanitised
   gp << "set key off\n";
   gp << "plot '-' with circles, "; // for the points

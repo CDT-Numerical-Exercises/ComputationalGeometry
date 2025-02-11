@@ -329,7 +329,7 @@ void save_triangulation(const std::filesystem::path fn, const size_t i,
                         const double xmin, const double xmax,
                         const double ymin, const double ymax) {
   Gnuplot gp;
-  gp << "set terminal pngcairo size 350,262 enhanced font 'Verdana,10'\n";
+  gp << "set terminal pngcairo size 640,480 enhanced font 'Verdana,10'\n";
   gp << "set output " << fn << "\n"; // be warned -- this may not be sanitised
   gp << "set yrange[" << ymin-0.5 << ":" << ymax+0.5 << "]\n";
   gp << "set xrange[" << xmin-0.5 << ":" << xmax+0.5 << "]\n";
